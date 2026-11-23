@@ -1,0 +1,41 @@
+name: ORBIT Paper Ledger
+on:
+  schedule:
+    # New York 08:37 before the open (both DST / standard time)
+    - cron: '37 12 * * 1-5'
+    - cron: '37 13 * * 1-5'
+    # New York 17:17 after market close (both DST / standard time)
+    - cron: '17 21 * * 1-5'
+    - cron: '17 22 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: orbit-paper-ledger
+  cancel-in-progress: false
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compute model-only paper record
+        run: node orbit-ledger/run.js
+      - name: Append daily snapshot when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- orbit-ledger/data/ledger.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add orbit-ledger/data/ledger.json
+            git commit -m "ORBIT paper ledger: verified daily snapshot [skip ci]"
+            git push
+          else
+            echo 'No new fully verified daily snapshot.'
+          fi
