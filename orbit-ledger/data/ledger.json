@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "modelVersion": "4.0.0",
+  "status": "not_started",
+  "initialCapital": 10000,
+  "slippageBps": 5,
+  "executionModel": "Signal using prior completed close; volume/close confirmed after session; fill next trading session open; conservative OHLC stop ordering",
+  "riskPerTradePct": 0.5,
+  "maxPositionPct": 20,
+  "maxPositions": 3,
+  "startDate": null,
+  "updatedAt": null,
+  "cash": 10000,
+  "positions": [],
+  "orders": [],
+  "signals": [],
+  "trades": [],
+  "equityHistory": [],
+  "lastSnapshotDate": null,
+  "lastMarkDate": null,
+  "warnings": []
+}
