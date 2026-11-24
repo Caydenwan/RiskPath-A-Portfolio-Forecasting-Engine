@@ -1,22 +1,30 @@
 {
   "schemaVersion": 2,
   "modelVersion": "4.0.0",
-  "status": "not_started",
+  "status": "active",
   "initialCapital": 10000,
   "slippageBps": 5,
   "executionModel": "Signal using prior completed close; volume/close confirmed after session; fill next trading session open; conservative OHLC stop ordering",
   "riskPerTradePct": 0.5,
   "maxPositionPct": 20,
   "maxPositions": 3,
-  "startDate": null,
-  "updatedAt": null,
+  "startDate": "2026-11-24",
+  "updatedAt": "2026-11-24T22:44:27.571Z",
   "cash": 10000,
   "positions": [],
   "orders": [],
   "signals": [],
   "trades": [],
-  "equityHistory": [],
+  "equityHistory": [
+    {
+      "date": "2026-11-24",
+      "equity": 10000,
+      "cash": 10000,
+      "openPositions": 0,
+      "spyClose": 718.780029296875
+    }
+  ],
   "lastSnapshotDate": null,
-  "lastMarkDate": null,
+  "lastMarkDate": "2026-11-24",
   "warnings": []
 }
