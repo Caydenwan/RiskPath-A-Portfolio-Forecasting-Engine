@@ -120,11 +120,11 @@ def calculate_goal(r,p,public=False):
         needed=np.partition(req,required_count-1,axis=0)[required_count-1]
         rounded=np.ceil(needed/50)*50
         j=min(range(len(possible)),key=lambda j:(rounded[j],risk_train[h-1][possible[j]],possible[j]))
-        return confirm(h,float(rounded[j]),int(possible[j]))
+        return best(h,float(rounded[j]))
     current=best(years,monthly)
     same=required(years)
     alternatives=[]
-    if same is not None and same['monthly']>=monthly and not (same['monthly']==monthly and current and current['verified']):
+    if same is not None and (same['monthly']!=monthly or not (current and current['verified'])):
         alternatives.append(dict(kind='contribution',**same))
     # Select the first later horizon meeting BOTH SCREEN bounds. Confirm once.
     # Don't choose alternatives based on holdout outcomes.
