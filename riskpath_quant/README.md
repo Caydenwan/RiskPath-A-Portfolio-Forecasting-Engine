@@ -1,20 +1,10 @@
-# RiskPath | Quantitative Portfolio Research
+# RiskPath 2.2 — Research Engine
 
-## Real-market research (on demand)
+Institutional multi-asset portfolio construction, risk analytics and historical-data evaluation. See the [project overview](../README.md) for the investment universe, mandate constraints and synthetic benchmark results.
 
-Download the current 28-asset universe's adjusted-price history, use only completed common monthly observations, compare 36- and 60-month training windows with at least 12 test months each, and record data coverage, package versions and an input SHA-256 fingerprint. Ineligible windows are explicitly marked; retrieval or evaluation failures raise errors rather than substituting artificial data. The 36-month window is exploratory, with limited observations relative to the universe size.
+## Quick start
 
-```bash
-cd riskpath_quant
-python -m pip install -r requirements.txt yfinance
-python market_study.py
-```
-
-Alternatively, use the repository Actions tab and select **RiskPath market data research** → **Run workflow**. The on-demand job reports aggregate metrics, not raw prices or return series. No automatic scheduling, paid feed or write access is required. Use the data only as permitted by the provider's terms. Network retrieval has not yet been verified. Keep locally downloaded market data out of public commits. The real-market runner excludes the liability-relative model until independently sourced liability data is available.
-
-## Institutional multi-asset laboratory (v2.1)
-
-28 liquid investment vehicles across seven sleeves; illustrative pension and liquid multi-strategy mandates; constrained minimum variance, mean-variance utility, group risk budgeting, CVaR and liability-aware optimization. Quarterly walk-forward rebalancing includes modeled trading costs. See the [institutional research report](institutional_research.md), [synthetic metrics](institutional_outputs/metrics.csv), and [stress scenarios](institutional_outputs/stress.csv).
+Run from the repository root:
 
 ```bash
 cd riskpath_quant
@@ -23,53 +13,68 @@ python -m pytest -q
 python institutional.py
 ```
 
-Optional market-data acquisition (requires internet and the third-party yfinance package):
+The institutional experiment is deterministic and synthetic. It is useful for numerical validation, not evidence of actual investment performance.
+
+## Historical market-data research
 
 ```bash
 python -m pip install yfinance
-python download_returns.py --out market_returns.csv
-python institutional.py --returns-csv market_returns.csv --out market_results
+python market_study.py
 ```
 
-The optional downloader uses adjusted prices, common complete monthly returns and a completed-month cutoff. No pre-inception backfilling. At least 61 consecutive monthly returns for all 28 assets are required, and a full 60-month estimation window limits the out-of-sample period for newer funds. The liability-aware model requires a separate aligned liability-return CSV (column `liability_return`, date index) supplied through `--liability-csv`. The downloader's live network operation has not been validated in this experiment. No actual market performance is claimed. The default experiment is synthetic.
+The historical study requests adjusted prices for the current 28-vehicle universe from Yahoo Finance via the unofficial yfinance client. It excludes incomplete months, uses common valid observations, and does not fill pre-inception or missing returns. It evaluates 36- and 60-month rolling estimation windows with at least 12 out-of-sample months, quarterly rebalancing and 15 bp modeled cost per gross dollar traded. Ineligible windows are reported; errors never trigger a synthetic fallback.
 
-## Original 11-asset laboratory (v2.0)
+Alternatively, run the **RiskPath market data research** workflow in GitHub Actions. Actual network retrieval and end-to-end historical performance have not yet been verified. Follow the data provider's terms and keep raw downloaded returns out of public commits.
 
-Research prototype for comparing long-only multi-asset allocation rules with chronological out-of-sample simulation, explicit transaction costs and joint block resampling.
+The local market study writes aggregate metrics, data-coverage records, package versions, an input SHA-256 fingerprint and explicit success/failure status under the ignored directory `market_study_local/`. No real liability series is supplied by the market-data runner.
 
-## Reproduce
-Python 3.11+ recommended.
+### External data and liabilities
 
 ```bash
-cd riskpath_quant
-python -m pip install -r requirements.txt
-python -m pytest -q
-python run.py
+python institutional.py --returns-csv monthly_returns.csv --out external_results
+python institutional.py --returns-csv monthly_returns.csv --liability-csv liabilities.csv --out external_results
 ```
 
-For an external return dataset: `python run.py --returns-csv monthly_returns.csv --out external_results`. First CSV column contains chronological monthly dates (one observation per consecutive month); subsequent columns must be BIL, IEF, TLT, LQD, TIP, SPY, QQQ, EFA, EEM, GLD, VNQ in that order. Returns must be finite decimal simple total returns greater than -1, with at least 61 observations. The runner does not verify data provenance. Outputs include monthly net returns, allocations, metrics and simulation quantiles. No paid APIs are required.
+Use a date index with consecutive monthly decimal simple returns and the following columns in exact order:
 
-## Methodology
-- Equal-weight and SPY/IEF 60/40 benchmarks.
-- Long-only fully invested minimum variance with 25% diagonal covariance shrinkage and a small ridge.
-- Risk parity minimizes squared deviations from equal variance contributions.
-- Empirical 95% CVaR minimized using linear programming.
-- Rolling 60-month estimation windows, quarterly rebalancing, weight drift and 10 bp per gross dollar traded, including initial entry.
-- Cash proxy excess-return Sharpe, annualized volatility, CAGR, drawdown, monthly empirical tail loss and annual gross turnover.
-- Circular joint six-month block bootstrap, with a fixed seed; investment NAV is independent of external contributions.
+```text
+BIL,VTI,IWM,QQQ,VTV,VEA,VWO,SHY,IEF,TLT,TIP,BNDX,LQD,HYG,EMB,BKLN,GLD,DBC,VNQ,IGF,DBMF,KMLM,BTAL,QAI,UUP,TAIL,PSP,BIZD
+```
 
-## Synthetic benchmark
-240 artificial monthly observations, 180 evaluated out of sample; all labels are proxies and are not actual ETF performance.
+The institutional runner requires more than 60 monthly observations. The optional liability file must contain an aligned date index and a `liability_return` column. The runner does not independently verify external data provenance. The funding-ratio model is stylized and excludes contributions, payouts and actuarial cash flows.
 
-| Method | CAGR | Ann. vol | Sharpe (excess BIL) | Max drawdown |
-|---|---:|---:|---:|---:|
-| Equal | -3.05% | 9.16% | -0.547 | -62.86% |
-| 60/40 | -3.54% | 9.41% | -0.586 | -64.21% |
-| Minimum variance | 2.26% | 0.26% | -0.413 | -0.008% |
-| Risk parity | 1.58% | 1.51% | -0.498 | -6.21% |
-| CVaR | 2.24% | 0.27% | -0.466 | -0.008% |
+## Model specification
 
-All five models have negative cash-relative Sharpe in this particular artificial sample. The minimum-risk methods are cash-like and do not establish an investment advantage. See [research note](research.md).
+All mandate-constrained models are fully invested and long-only at the vehicle level. Sleeve limits and an 18% noncash position cap apply at each rebalance. Underlying funds may use derivatives, shorting or leverage.
 
-## Scope
-Synthetic numerical experiment only; no live feed, verified historical returns, investment recommendation or claim of performance. No leverage, shorting, taxes, spread model, market impact, estimation uncertainty or investor risk-budget calibration. The prospective bootstrap illustration holds weights constant monthly and excludes trading costs; the backtest rebalances quarterly and includes modeled costs. Neither establishes future returns.
+| Model | Objective |
+|---|---|
+| Policy portfolio | Fixed sleeve reference weights |
+| 60/40 | VTI/IEF benchmark, exempt from mandate constraints |
+| Minimum variance | Minimize portfolio variance |
+| Mean-variance utility | Trade off expected return and variance |
+| Group risk budgeting | Minimize deviation from target sleeve risk contributions |
+| CVaR | Minimize empirical 95% tail loss |
+| Liability-aware | Minimize variance of asset-minus-liability returns |
+
+Annualized covariance uses 20% diagonal shrinkage and a small ridge. Estimated returns are shrunk 75% toward within-sleeve means. The risk-budget objective allows signed contributions and is solved locally. Empirical CVaR with limited monthly observations is statistically unstable.
+
+## Files and outputs
+
+| File | Description |
+|---|---|
+| [institutional.py](institutional.py) | Investment mandates, optimization, backtesting, funding ratio and stress tests |
+| [market_study.py](market_study.py) | Historical data study and provenance |
+| [download_returns.py](download_returns.py) | Market data alignment and validation |
+| [institutional_research.md](institutional_research.md) | Mathematical methods and synthetic research findings |
+| [institutional_outputs/metrics.csv](institutional_outputs/metrics.csv) | Synthetic portfolio comparison |
+| [institutional_outputs/stress.csv](institutional_outputs/stress.csv) | Prescribed synthetic sleeve shocks |
+| [institutional_outputs/metadata.json](institutional_outputs/metadata.json) | Synthetic experiment configuration |
+| [test_institutional.py](test_institutional.py) | Institutional model validation |
+| [test_engine.py](test_engine.py) | Baseline model validation |
+
+Running the institutional experiment also generates allocation, risk contribution and monthly net-return files locally. Earlier baseline experiments remain available in [the original research note](research.md), `engine.py` and `run.py` for reproducibility; they are not the current institutional benchmark.
+
+## Interpretation
+
+The selected universe is not a point-in-time investment universe. Common inception dates, fund selection bias, covariance estimation error, simplified execution costs and fund-level exposures limit conclusions. Listed private-market vehicles are not direct private asset investments. The current release does not claim verified historical performance or production readiness.
