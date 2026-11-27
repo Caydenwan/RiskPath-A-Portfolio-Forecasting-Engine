@@ -9,7 +9,7 @@
   "maxPositionPct": 20,
   "maxPositions": 3,
   "startDate": "2026-11-24",
-  "updatedAt": "2026-11-25T22:42:44.504Z",
+  "updatedAt": "2026-11-27T22:18:03.546Z",
   "cash": 10000,
   "positions": [],
   "orders": [],
@@ -29,9 +29,16 @@
       "cash": 10000,
       "openPositions": 0,
       "spyClose": 716.7000122070312
+    },
+    {
+      "date": "2026-11-27",
+      "equity": 10000,
+      "cash": 10000,
+      "openPositions": 0,
+      "spyClose": 728.3200073242188
     }
   ],
   "lastSnapshotDate": null,
-  "lastMarkDate": "2026-11-25",
+  "lastMarkDate": "2026-11-27",
   "warnings": []
 }
