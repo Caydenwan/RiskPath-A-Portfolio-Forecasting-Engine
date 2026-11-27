@@ -4,7 +4,7 @@
 
 **[Open interactive research workbench](https://riskpath-workbench.vercel.app)** — browser-based controls, charts and Python calculations; no local installation required.
 
-The web workbench opens in **Future forecast** mode: select initial capital, monthly contributions, horizon and allocation model. It simulates 2,000 joint block-bootstrap paths with quarterly rebalancing and modeled trading costs, beginning on the user's current date. Historical backtesting remains a separate mode. Forecasts are conditional on the selected training data; synthetic data are the default and no live returns are claimed.
+The web workbench opens in **Personal / Future forecast** mode: select initial capital, monthly contributions, horizon and risk tolerance (0–100). The personal optimizer maps effective risk to a mean-variance risk-aversion coefficient and applies illustrative horizon ceilings (1 year: 30; 3 years: 50; 5 years: 70; 10+ years: 100). It uses fixed long-only constraints; institutional model selection and historical backtesting remain in Institutional mode. This preference mapping is not a validated suitability assessment. It simulates 2,000 joint block-bootstrap paths with quarterly rebalancing and modeled trading costs, beginning on the user's current date. Historical backtesting remains a separate mode. Forecasts are conditional on the selected training data; synthetic data are the default and no live returns are claimed.
 
 
 A Python research platform for systematic portfolio construction, risk budgeting, liability-relative allocation and chronological backtesting across 28 liquid investment vehicles. RiskPath compares alternative allocation objectives under explicit investment mandates, rather than treating a portfolio as a fixed set of weights.
