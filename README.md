@@ -1,88 +1,136 @@
-# RiskPath 2.2
+# RiskPath
 
-**Institutional Multi-Asset Portfolio Research & Risk Analytics**
+**Goal-constrained portfolio planning · Multi-asset quantitative research**
 
-**[Open interactive research workbench](https://riskpath-workbench.vercel.app)** — browser-based controls, charts and Python calculations; no local installation required.
+An independent browser-based financial research platform that connects goal-based planning, constrained portfolio construction, historical bootstrap simulation and out-of-sample model comparison. Built with Python, NumPy, pandas, SciPy, Pyodide and a lightweight JavaScript interface.
 
-The web workbench opens in **Personal / Future forecast** mode: select initial capital, monthly contributions, horizon and risk tolerance (0–100). The personal optimizer maps effective risk to a mean-variance risk-aversion coefficient and applies illustrative horizon ceilings (1 year: 30; 3 years: 50; 5 years: 70; 10+ years: 100). It uses fixed long-only constraints; institutional model selection and historical backtesting remain in Institutional mode. This preference mapping is not a validated suitability assessment. It simulates 2,000 joint block-bootstrap paths with quarterly rebalancing and modeled trading costs, beginning on the user's current date. The web default is Mixed market, an illustrative stress-regime overlay. Users can instead select baseline, recession, sudden shock or persistent stress; see [crisis methodology](riskpath_quant/crisis_research.md). The institutional model selector includes objective-based explanations, and holdings show fund names grouped by asset class. Historical backtesting remains a separate mode. Forecasts are conditional on the selected training data. Public Research is the default: an independent five-fund TSP model uses 81 published monthly observations with no key, through August 2026. Advanced Market retains the original 28-ETF universe via a private Twelve Data connection or CSV, with optional device-local credential and monthly-history caching. See [public dataset and methodology](riskpath_quant/public_data.md). The public data are a dated snapshot, not live; synthetic demo is explicit opt-in. See [multi-horizon estimation](riskpath_quant/estimation_research.md).
+[**Launch Portfolio**](https://riskpath-workbench.vercel.app/?view=portfolio) · [**Launch Research**](https://riskpath-workbench.vercel.app/?view=research) · [Methodology](riskpath_quant/research_v2.md) · [Numerical regression](https://github.com/Caydenwan/RiskPath-Institutional/actions/workflows/riskpath-regression.yml)
 
+![Portfolio workspace — actual public-data browser capture](docs/screenshots/portfolio.png)
 
-A Python research platform for systematic portfolio construction, risk budgeting, liability-relative allocation and chronological backtesting across 28 liquid investment vehicles. RiskPath compares alternative allocation objectives under explicit investment mandates, rather than treating a portfolio as a fixed set of weights.
+*Portfolio workspace, using the published five-fund TSP monthly-return snapshot. The goal and inputs are illustrative; the outputs are computed from the selected data.*
 
-[Research methodology](riskpath_quant/institutional_research.md) · [Model implementation](riskpath_quant/institutional.py) · [Market-data study](riskpath_quant/market_study.py) · [Run market research](https://github.com/Caydenwan/RiskPath-Institutional/actions/workflows/riskpath-market-study.yml)
+## Two workspaces, one research engine
+
+| Portfolio — financial planning | Research — quantitative analytics |
+|---|---|
+| Specify financial goal, capital, savings and time horizon | Compare personal and institutional allocation objectives |
+| Set maximum drawdown and acceptable breach probability | Efficient frontier, model validation and benchmark comparison |
+| Search allocations within the risk budget | Adaptive covariance and expected-return estimation |
+| Reverse-solve monthly savings and alternative horizons | Walk-forward backtests, scenario shocks and risk contributions |
+| Interactive feasibility map and allocation breakdown | Explicit pension and liquid multi-strategy mandates |
+
+The public demo requires no API key. Advanced Market supports 28 ETFs with owner-authorized private cloud history, direct personal API connection or uploaded CSV. Private API keys and downloaded vendor data are not published in this repository.
+
+## 01 — Portfolio: from a target to a feasible plan
+
+Rather than increasing risk automatically to reach an aspirational return, RiskPath first screens candidate allocations against the user's drawdown constraint, then compares modeled goal success.
+
+![Goal alternatives](docs/screenshots/goal-paths.png)
+
+![Contribution–horizon feasibility map](docs/screenshots/feasibility-map.png)
+
+The objective is to maximize modeled terminal wealth success over a finite, constrained candidate set:
+
+```math
+\max_{w\in\mathcal{C}}\;\widehat{P}(W_T\geq G_0(1+\pi)^T)
+```
+
+subject to the modeled probability of exceeding the maximum drawdown threshold remaining within the risk budget. The user specifies the required goal success probability separately.
+
+- Long-only candidate portfolios generated from constrained mean–variance allocations and cash blends.
+- Joint six-month historical return blocks drawn using the selected trailing-window mixture.
+- 1,000 screening paths and 2,000 separate confirmation paths; one-sided 95% Wilson bounds on simulation success and breach frequencies.
+- Monthly rebalancing with modeled purchase, contribution and traded-notional costs.
+- Reverse-solve savings on a $50 grid; explore one- to thirty-year horizons without relaxing the risk threshold.
+- No allocation displayed when the selected candidate's risk limit is not independently confirmed.
+
+Independent simulation streams address Monte Carlo selection noise, not independent market evidence. The finite search is not a globally optimal solution, and modeled probabilities do not guarantee future outcomes.
+
+[Goal planner implementation](riskpath_quant/goal_planner.py) · [Numerical tests](riskpath_quant/test_goal_planner.py)
+
+## 02 — Research: portfolio construction and validation
+
+![Research workspace](docs/screenshots/research.png)
+
+The research workspace preserves the original personal mean–variance model and the institutional allocation laboratory. It separates estimated risk and arithmetic expected return from realized historical performance and simulated future wealth.
+
+### Constrained efficient frontier
+
+![Efficient frontier computed from public return history](docs/screenshots/efficient-frontier.png)
+
+### Same-period model validation
+
+![Historical model validation](docs/screenshots/validation.png)
+
+Fixed 36-, 60-, 120- and 240-month estimation windows and the adaptive blend are compared when sufficient observations exist. Eligible methods use the same out-of-sample dates, quarterly rebalancing and modeled costs. US equity proxy, 60/40 and equal-weight benchmarks use identical test dates; inadequate windows are explicitly excluded.
+
+This is a retrospective research comparison, not a held-out model selection result or evidence of persistent alpha.
+
+### Conditional crisis analysis
+
+![Scenario comparison](docs/screenshots/scenarios.png)
+
+Baseline historical resampling, recession, persistent pressure and sudden shocks use the same target allocation and common random numbers. Forced stress overlays are hypothetical, not historical crisis reconstructions or calibrated event probabilities.
+
+### Institutional allocation
+
+![Institutional risk-budget backtest — explicitly synthetic experiment](docs/screenshots/institutional-synthetic.png)
+
+*This institutional example uses synthetic returns, not actual ETF performance.*
+
+| Objective | Method |
+|---|---|
+| Policy reference | Fixed strategic allocation |
+| Minimum variance | Minimize estimated portfolio variance |
+| Mean–variance | Trade off arithmetic expected return and variance |
+| Risk budgeting | Match sleeve-level risk contributions to illustrative targets |
+| CVaR | Empirical 95% expected shortfall optimization |
+| Liability-aware | Minimize asset-minus-liability return variance with aligned liability data |
+
+Two illustrative mandates constrain target asset-class weights: pension-style and liquid multi-strategy. Liability-aware experiments use stylized synthetic liabilities; no actuarial cash-flow model is claimed.
 
 ## Research architecture
 
 ```mermaid
 flowchart TD
-    A[Market data or synthetic validation data] --> B[Return alignment and data validation]
-    B --> C[Covariance and expected-return estimation]
-    C --> D[Mandate-constrained portfolio optimization]
-    D --> E[Walk-forward backtesting]
-    E --> F[Risk, performance and turnover analysis]
-    D --> G[Scenario stress tests and liability analysis]
+    A[Public TSP snapshot] --> D[Validated monthly returns]
+    B[Owner-only ETF history] --> D
+    C[CSV or synthetic fixture] --> D
+    D --> E[Multi-window estimation and shrinkage]
+    E --> F[Portfolio: goal-constrained candidate search]
+    E --> G[Research: constrained allocation models]
+    F --> H[Historical bootstrap screen and confirmation]
+    H --> I[Feasible plans and interactive map]
+    G --> J[Walk-forward validation and benchmarks]
+    G --> K[Efficient frontier and stress diagnostics]
 ```
 
-| Research capability | Current implementation |
+| Layer | Implementation |
 |---|---|
-| Investment universe | 28 vehicles across seven asset sleeves |
-| Mandates | Illustrative pension and liquid multi-strategy policies |
-| Optimization | Minimum variance, mean-variance utility, group risk budgeting, empirical CVaR, liability-aware allocation |
-| Statistical estimation | Adaptive 36/60/120/240-month moment blending with data-dependent diagonal shrinkage; legacy fixed-window baseline |
-| Execution simulation | Quarterly rebalancing, weight drift, modeled transaction costs |
-| Risk analytics | Volatility, excess-return Sharpe, maximum drawdown, expected shortfall, signed risk contributions |
-| Liability analytics | Stylized funding ratio and asset-minus-liability return risk |
-| Market data | Twelve Data browser connection or Yahoo Finance via yfinance offline; completed common monthly returns; explicit coverage and provenance |
-| Research validation | Synthetic numerical experiments and automated test suite |
+| Public data | Five TSP funds; 81 completed monthly observations, Dec 2019–Aug 2026; dated snapshot |
+| Private data | 28-ETF history; owner-authenticated private Vercel Blob storage; monthly refresh configured, first scheduled execution not independently verified |
+| Estimation | Adaptive trailing-window blend; Ledoit–Wolf correlation shrinkage preserving marginal volatility scales |
+| Planning | 1,000 screening + 2,000 confirmation paths; monthly target rebalancing |
+| Research | 2,000 or 10,000 forecast paths; quarterly rebalancing and modeled costs |
+| Runtime | Python calculations in browser via Pyodide; no paid AI API |
+| Verification | 58 Python regression tests passed in the latest numerical regression run; browser screenshot workflow uses public or explicitly synthetic data |
 
-## Investment universe
+### Advanced investment universe
 
 | Sleeve | Instruments |
 |---|---|
-| Cash and Treasury bills | BIL |
+| Cash / Treasury bills | BIL |
 | Global public equity | VTI, IWM, QQQ, VTV, VEA, VWO |
 | Government and global bonds | SHY, IEF, TLT, TIP, BNDX |
 | Credit | LQD, HYG, EMB, BKLN |
 | Real assets | GLD, DBC, VNQ, IGF |
-| Diversifying strategies | DBMF, KMLM, BTAL, QAI, UUP, TAIL |
+| Diversifiers | DBMF, KMLM, BTAL, QAI, UUP, TAIL |
 | Listed private-market proxies | PSP, BIZD |
 
-The investment universe is liquid and exchange-traded. Listed private-market proxies are not direct private-fund investments. Fund-level exposures can include derivatives, shorts and leverage even though portfolio-level vehicle weights are long-only.
+Portfolio weights are long-only at the vehicle level. Underlying funds can have derivatives, short exposures or leverage; listed private-market proxies are not direct private funds.
 
-## Portfolio mandates
-
-| Sleeve | Pension policy | Liquid multi-strategy policy |
-|---|---:|---:|
-| Cash | 3–12% | 5–20% |
-| Global equity | 25–45% | 10–35% |
-| Rates | 15–40% | 10–35% |
-| Credit | 5–22% | 5–25% |
-| Real assets | 5–22% | 5–25% |
-| Diversifiers | 2–20% | 10–35% |
-| Listed private-market proxies | 0–10% | 0–10% |
-
-These illustrative policy limits apply at rebalancing. Noncash single-position targets are capped at 18%. The 60/40 benchmark is exempt from mandate constraints.
-
-## Research findings — synthetic validation only
-
-The checked-in experiment uses 240 artificial monthly observations, a 60-month rolling training window and 180 out-of-sample months, with 15 basis points of modeled cost per gross dollar traded.
-
-| Portfolio | CAGR | Annual volatility | Excess Sharpe | Maximum drawdown |
-|---|---:|---:|---:|---:|
-| 60/40 benchmark | 4.35% | 7.41% | 0.30 | -22.33% |
-| Pension policy | 5.56% | 7.59% | 0.44 | -20.66% |
-| Pension minimum variance | 4.65% | 2.63% | 0.87 | -4.94% |
-| Pension mean-variance | 6.01% | 6.28% | 0.59 | -11.49% |
-| Liquid multi minimum variance | 4.66% | 2.04% | 1.13 | -1.52% |
-| Liquid multi CVaR | 5.16% | 2.43% | 1.13 | -1.77% |
-
-The stylized liability-aware model reduced asset-minus-liability return volatility from 14.02% to 9.24% relative to the pension policy, while sacrificing asset CAGR. This illustrates the distinction between asset-only optimization and liability-relative objectives.
-
-These figures describe one seeded synthetic experiment, not actual ETF returns, demonstrated alpha, or expected investment performance. See [all metrics](riskpath_quant/institutional_outputs/metrics.csv), [stress tests](riskpath_quant/institutional_outputs/stress.csv) and [experiment metadata](riskpath_quant/institutional_outputs/metadata.json).
-
-## Reproduce the research
-
-Python 3.11 and the dependencies in the research directory.
+## Reproduce and explore
 
 ```bash
 cd riskpath_quant
@@ -91,34 +139,22 @@ python -m pytest -q
 python institutional.py
 ```
 
-### Historical market-data workflow
-
-```bash
-python -m pip install yfinance
-python market_study.py
-```
-
-The runner retrieves adjusted prices, excludes incomplete months, requires common valid monthly returns, and evaluates eligible 36-, 60-, 120- and 240-month windows plus adaptive estimation with at least 12 months out of sample. It records coverage, package versions and a data fingerprint. Failures are explicit: no synthetic substitution.
-
-Alternatively, select **RiskPath market data research** in the repository Actions tab and choose **Run workflow**. The job reports aggregate results. Live retrieval and end-to-end historical performance have not yet been verified; there are no confirmed real-market results in this release. The external liability series is not available, so the market-data runner excludes liability-aware optimization.
-
-## Repository structure
-
-| Path | Purpose |
+| Source | Purpose |
 |---|---|
-| [riskpath_quant/](riskpath_quant/) | Current research module |
-| [institutional.py](riskpath_quant/institutional.py) | Constrained multi-asset allocation, backtest and liability analysis |
-| [market_study.py](riskpath_quant/market_study.py) | Historical-data study and provenance |
-| [download_returns.py](riskpath_quant/download_returns.py) | Adjusted-price ingestion |
-| [engine.py](riskpath_quant/engine.py) | Baseline optimization, performance metrics and block bootstrap |
-| [test_institutional.py](riskpath_quant/test_institutional.py) | Institutional model tests |
-| [test_engine.py](riskpath_quant/test_engine.py) | Baseline model tests |
-| [institutional_research.md](riskpath_quant/institutional_research.md) | Research design, mathematics and results |
+| [goal_planner.py](riskpath_quant/goal_planner.py) | Goal search, drawdown constraints, independent bootstrap confirmation |
+| [personal.py](riskpath_quant/personal.py) | Personal allocation candidates |
+| [institutional.py](riskpath_quant/institutional.py) | Institutional allocation and walk-forward execution |
+| [research.py](riskpath_quant/research.py) | Frontier, same-period validation, scenarios |
+| [estimation.py](riskpath_quant/estimation.py) | Moment blending and correlation shrinkage |
+| [forecast.py](riskpath_quant/forecast.py) | Research bootstrap and cash-flow simulation |
+| [public_research.py](riskpath_quant/public_research.py) | Independent five-fund public model |
+| [web/](web/) | Browser workbench, Python worker and protected data endpoint |
+| [capture_showcase.py](docs/capture_showcase.py) | Reproducible browser captures of the actual public website |
 
-The original forecasting notebook and existing ORBIT components are retained for compatibility; the current research entry point is the institutional module.
+Additional documentation: [research v2](riskpath_quant/research_v2.md), [institutional research](riskpath_quant/institutional_research.md), [public data provenance](riskpath_quant/public_data.md), [crisis methodology](riskpath_quant/crisis_research.md), [offline market study](riskpath_quant/market_study.py).
 
-## Scope and limitations
+## Limitations
 
-An independent research prototype, not an institutional production system. Current-universe selection bias, short common histories, estimated transaction costs and the simplified liability model limit interpretation. No direct private-asset valuation, financing or margin model, actuarial cash-flow schedule or independently validated live-market performance is claimed. Data retrieval is subject to provider availability and terms.
+Independent research prototype, not an institutional production system or individualized investment advice. Limited common history, current-universe selection bias, uncertain expected returns, simplified execution costs and monthly (not intramonth) drawdowns constrain interpretation. Historical simulation is not a calibrated forecast; scenario overlays may double-count stress. Real-market strategy superiority, long-run forecast calibration and first scheduled private refresh remain unverified. The public TSP snapshot is dated; private vendor returns are not redistributed.
 
-**Release 2.2** · Institutional allocation and historical-data research workflow.
+**Author:** Yunhao (Cayden) Wan · Finance & Business Analytics

@@ -1,0 +1,38 @@
+name: Capture RiskPath public showcase
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/capture_showcase.py'
+      - '.github/workflows/showcase-capture.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  screenshots:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install playwright==1.52.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python docs/capture_showcase.py
+      - name: Publish verified screenshot files to showcase branch
+        if: github.ref_name == 'portfolio-showcase' || github.head_ref == 'portfolio-showcase'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/*.png
+          git diff --cached --quiet || git commit -m "Capture actual RiskPath product screenshots"
+          git push origin HEAD:portfolio-showcase
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riskpath-showcase
+          path: docs/screenshots/*.png
+          retention-days: 7
