@@ -4,7 +4,7 @@ import pandas as pd
 from crisis import SCENARIOS, crisis_states, apply_crisis
 
 
-def forecast_paths(r, w, initial, contribution, years, as_of, cost_bps=15, paths=2000, seed=42, block=6, scenario='baseline'):
+def forecast_paths(r, w, initial, contribution, years, as_of, cost_bps=15, paths=2000, seed=42, block=6, scenario='baseline', crisis_overlay=None):
     x=np.asarray(r,dtype=float); w=np.asarray(w,dtype=float)
     if x.ndim!=2 or len(x)<block or not np.isfinite(x).all() or (x<=-1).any():
         raise ValueError('Invalid training returns')
@@ -27,7 +27,7 @@ def forecast_paths(r, w, initial, contribution, years, as_of, cost_bps=15, paths
             turnover=np.abs(weights-w).sum(axis=1); weights[:]=w
         else: turnover=np.zeros(paths)
         realized=x[ids[:,t]]
-        if scenario!='baseline': realized=apply_crisis(realized,states[:,t],shock_rng)
+        if scenario!='baseline': realized=(crisis_overlay or apply_crisis)(realized,states[:,t],shock_rng)
         gross=np.sum(weights*realized,axis=1)
         multiplier=(1-turnover*cost_bps/10000)*(1+gross)
         nav*=multiplier; wealth=wealth*multiplier+contribution
