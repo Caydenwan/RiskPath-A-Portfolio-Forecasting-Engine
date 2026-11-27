@@ -1,0 +1,39 @@
+name: RiskPath market data research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  market-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: riskpath_quant
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt yfinance
+      - run: python -m pytest -q
+      - name: Download and evaluate real market data
+        run: python market_study.py --out market_study_local
+      - name: Record aggregate research results
+        if: success()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          import pandas as pd
+          from pathlib import Path
+          p=Path("market_study_local")
+          meta=json.loads((p/"provenance.json").read_text())
+          print("## Real-market study")
+          print("Completed monthly returns:",meta["first_return"],"to",meta["last_return"])
+          print("Input fingerprint:",meta["input_sha256"])
+          print("\nWindow coverage:\n")
+          print(json.dumps(meta["lookback_coverage"],indent=2))
+          print("\n```text")
+          print(pd.read_csv(p/"metrics.csv").round(4).to_string(index=False))
+          print("```")
+          PY
