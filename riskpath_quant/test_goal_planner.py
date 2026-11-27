@@ -41,6 +41,7 @@ def test_public_goal_planner_and_interactive_cell():
     assert v['current']==v['grid'][v['amounts'].index(500)][v['horizons'].index(10)]
     assert v['required_plan'] is not None
     assert v['required_plan']['monthly']%50==0
+    q=v['required_plan']; assert q==v['grid'][v['amounts'].index(q['monthly'])][v['horizons'].index(10)]
     assert v['estimation']['common_months']==81
 
 def test_private_universe_and_tighter_risk():
