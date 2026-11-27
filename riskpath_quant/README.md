@@ -1,4 +1,27 @@
-# RiskPath 2.0 | Portfolio Construction and Risk Analytics
+# RiskPath | Quantitative Portfolio Research
+
+## Institutional multi-asset laboratory (v2.1)
+
+28 liquid investment vehicles across seven sleeves; illustrative pension and liquid multi-strategy mandates; constrained minimum variance, mean-variance utility, group risk budgeting, CVaR and liability-aware optimization. Quarterly walk-forward rebalancing includes modeled trading costs. See the [institutional research report](institutional_research.md), [synthetic metrics](institutional_outputs/metrics.csv), and [stress scenarios](institutional_outputs/stress.csv).
+
+```bash
+cd riskpath_quant
+python -m pip install -r requirements.txt
+python -m pytest -q
+python institutional.py
+```
+
+Optional market-data acquisition (requires internet and the third-party yfinance package):
+
+```bash
+python -m pip install yfinance
+python download_returns.py --out market_returns.csv
+python institutional.py --returns-csv market_returns.csv --out market_results
+```
+
+The optional downloader uses adjusted prices, common complete monthly returns and a completed-month cutoff. No pre-inception backfilling. At least 61 consecutive monthly returns for all 28 assets are required, and a full 60-month estimation window limits the out-of-sample period for newer funds. The liability-aware model requires a separate aligned liability-return CSV (column `liability_return`, date index) supplied through `--liability-csv`. The downloader's live network operation has not been validated in this experiment. No actual market performance is claimed. The default experiment is synthetic.
+
+## Original 11-asset laboratory (v2.0)
 
 Research prototype for comparing long-only multi-asset allocation rules with chronological out-of-sample simulation, explicit transaction costs and joint block resampling.
 
