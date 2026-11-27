@@ -1,5 +1,17 @@
 # RiskPath | Quantitative Portfolio Research
 
+## Real-market research (on demand)
+
+Download the current 28-asset universe's adjusted-price history, use only completed common monthly observations, compare 36- and 60-month training windows with at least 12 test months each, and record data coverage, package versions and an input SHA-256 fingerprint. Ineligible windows are explicitly marked; retrieval or evaluation failures raise errors rather than substituting artificial data. The 36-month window is exploratory, with limited observations relative to the universe size.
+
+```bash
+cd riskpath_quant
+python -m pip install -r requirements.txt yfinance
+python market_study.py
+```
+
+Alternatively, use the repository Actions tab and select **RiskPath market data research** → **Run workflow**. The on-demand job reports aggregate metrics, not raw prices or return series. No automatic scheduling, paid feed or write access is required. Use the data only as permitted by the provider's terms. Network retrieval has not yet been verified. Keep locally downloaded market data out of public commits. The real-market runner excludes the liability-relative model until independently sourced liability data is available.
+
 ## Institutional multi-asset laboratory (v2.1)
 
 28 liquid investment vehicles across seven sleeves; illustrative pension and liquid multi-strategy mandates; constrained minimum variance, mean-variance utility, group risk budgeting, CVaR and liability-aware optimization. Quarterly walk-forward rebalancing includes modeled trading costs. See the [institutional research report](institutional_research.md), [synthetic metrics](institutional_outputs/metrics.csv), and [stress scenarios](institutional_outputs/stress.csv).
