@@ -4,12 +4,12 @@
 
 **[Open interactive research workbench](https://riskpath-workbench.vercel.app)** — browser-based controls, charts and Python calculations; no local installation required.
 
-The web workbench opens in **Personal / Future forecast** mode: select initial capital, monthly contributions, horizon and risk tolerance (0–100). The personal optimizer maps effective risk to a mean-variance risk-aversion coefficient and applies illustrative horizon ceilings (1 year: 30; 3 years: 50; 5 years: 70; 10+ years: 100). It uses fixed long-only constraints; institutional model selection and historical backtesting remain in Institutional mode. This preference mapping is not a validated suitability assessment. It simulates 2,000 joint block-bootstrap paths with quarterly rebalancing and modeled trading costs, beginning on the user's current date. The web default is Mixed market, an illustrative stress-regime overlay. Users can instead select baseline, recession, sudden shock or persistent stress; see [crisis methodology](riskpath_quant/crisis_research.md). The institutional model selector includes objective-based explanations, and holdings show fund names grouped by asset class. Historical backtesting remains a separate mode. Forecasts are conditional on the selected training data; synthetic data are the default and no live returns are claimed.
+The web workbench opens in **Personal / Future forecast** mode: select initial capital, monthly contributions, horizon and risk tolerance (0–100). The personal optimizer maps effective risk to a mean-variance risk-aversion coefficient and applies illustrative horizon ceilings (1 year: 30; 3 years: 50; 5 years: 70; 10+ years: 100). It uses fixed long-only constraints; institutional model selection and historical backtesting remain in Institutional mode. This preference mapping is not a validated suitability assessment. It simulates 2,000 joint block-bootstrap paths with quarterly rebalancing and modeled trading costs, beginning on the user's current date. The web default is Mixed market, an illustrative stress-regime overlay. Users can instead select baseline, recession, sudden shock or persistent stress; see [crisis methodology](riskpath_quant/crisis_research.md). The institutional model selector includes objective-based explanations, and holdings show fund names grouped by asset class. Historical backtesting remains a separate mode. Forecasts are conditional on the selected training data. Real market is the default input mode: connect a personal Twelve Data key or upload monthly returns; synthetic demo is explicit opt-in. Live data retrieval has not yet been verified with a working key. See [multi-horizon estimation](riskpath_quant/estimation_research.md).
 
 
 A Python research platform for systematic portfolio construction, risk budgeting, liability-relative allocation and chronological backtesting across 28 liquid investment vehicles. RiskPath compares alternative allocation objectives under explicit investment mandates, rather than treating a portfolio as a fixed set of weights.
 
-[Research methodology](riskpath_quant/institutional_research.md) · [Model implementation](riskpath_quant/institutional.py) · [Market-data study](riskpath_quant/market_study.py) · [Run market research](https://github.com/Caydenwan/RiskPath-A-Portfolio-Forecasting-Engine/actions/workflows/riskpath-market-study.yml)
+[Research methodology](riskpath_quant/institutional_research.md) · [Model implementation](riskpath_quant/institutional.py) · [Market-data study](riskpath_quant/market_study.py) · [Run market research](https://github.com/Caydenwan/RiskPath-Institutional/actions/workflows/riskpath-market-study.yml)
 
 ## Research architecture
 
@@ -28,11 +28,11 @@ flowchart TD
 | Investment universe | 28 vehicles across seven asset sleeves |
 | Mandates | Illustrative pension and liquid multi-strategy policies |
 | Optimization | Minimum variance, mean-variance utility, group risk budgeting, empirical CVaR, liability-aware allocation |
-| Statistical estimation | Fixed covariance shrinkage, within-sleeve mean shrinkage |
+| Statistical estimation | Adaptive 36/60/120/240-month moment blending with data-dependent diagonal shrinkage; legacy fixed-window baseline |
 | Execution simulation | Quarterly rebalancing, weight drift, modeled transaction costs |
 | Risk analytics | Volatility, excess-return Sharpe, maximum drawdown, expected shortfall, signed risk contributions |
 | Liability analytics | Stylized funding ratio and asset-minus-liability return risk |
-| Market data | Yahoo Finance via yfinance; completed common monthly returns; explicit coverage and provenance |
+| Market data | Twelve Data browser connection or Yahoo Finance via yfinance offline; completed common monthly returns; explicit coverage and provenance |
 | Research validation | Synthetic numerical experiments and automated test suite |
 
 ## Investment universe
@@ -98,7 +98,7 @@ python -m pip install yfinance
 python market_study.py
 ```
 
-The runner retrieves adjusted prices, excludes incomplete months, requires common valid monthly returns, and evaluates eligible 36- and 60-month estimation windows with at least 12 months out of sample. It records coverage, package versions and a data fingerprint. Failures are explicit: no synthetic substitution.
+The runner retrieves adjusted prices, excludes incomplete months, requires common valid monthly returns, and evaluates eligible 36-, 60-, 120- and 240-month windows plus adaptive estimation with at least 12 months out of sample. It records coverage, package versions and a data fingerprint. Failures are explicit: no synthetic substitution.
 
 Alternatively, select **RiskPath market data research** in the repository Actions tab and choose **Run workflow**. The job reports aggregate results. Live retrieval and end-to-end historical performance have not yet been verified; there are no confirmed real-market results in this release. The external liability series is not available, so the market-data runner excludes liability-aware optimization.
 
