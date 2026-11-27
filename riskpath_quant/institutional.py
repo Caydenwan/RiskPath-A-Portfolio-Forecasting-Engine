@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize, linprog
 from engine import validate, metrics
+from estimation import moments, window_plan
 
 GROUPS = {
     'cash': ['BIL'],
@@ -45,16 +46,21 @@ def feasible(w,p,cap,tol=2e-6):
     return abs(w.sum()-1)<=tol and np.all(w>=-tol) and np.all(w<=cap+tol) and np.all(G@w>=np.array(p['lo'])-tol) and np.all(G@w<=np.array(p['hi'])+tol)
 
 
-def allocate(r,mandate,method,liability=None):
+def allocate(r,mandate,method,liability=None,estimation=None):
     validate(r)
     if list(r.columns)!=ASSETS or len(r)<12: raise ValueError('Need ordered universe and at least 12 months')
     p,ref,cap=spec(mandate); x=r.to_numpy(); n=len(ref); m=len(x)
     if method=='policy': return ref
     if method=='60_40':
         w=np.zeros(n); w[ASSETS.index('VTI')]=.6; w[ASSETS.index('IEF')]=.4; return w
-    s=covariance(x)
+    if estimation is not None:
+        avg,s=moments(x,estimation)
+        if method=='cvar':
+            x=x[-window_plan(len(x),estimation)[0][-1]:]; m=len(x)
+    else:
+        s=covariance(x); avg=x.mean(axis=0)*12
     # shrink trailing means 75% toward their within-sleeve means; no future returns.
-    avg=x.mean(axis=0)*12; mu=.25*avg+.75*(G.T @ ((G@avg)/G.sum(axis=1)))
+    mu=.25*avg+.75*(G.T @ ((G@avg)/G.sum(axis=1)))
     a=np.r_[G,-G]; b=np.r_[p['hi'],-np.array(p['lo'])]
     if method=='cvar':
         c=np.r_[np.zeros(n),1,np.full(m,1/(.05*m))]
@@ -66,7 +72,8 @@ def allocate(r,mandate,method,liability=None):
         elif method=='risk_budget': f=lambda w:np.sum((risk_contributions(w,s)-p['risk'])**2)
         elif method=='surplus':
             if liability is None or not liability.index.equals(r.index) or not np.isfinite(liability).all(): raise ValueError('Aligned liability returns required')
-            joint=covariance(np.c_[x,liability.to_numpy()])
+            joint=covariance(np.c_[x,liability.to_numpy()]) if estimation is None else moments(np.c_[x,liability.to_numpy()],estimation)[1]
+            if estimation is not None: s=joint[:-1,:-1]
             cross=joint[:-1,-1]
             f=lambda w:100*(w@s@w-2*w@cross)
         else: raise ValueError(method)
@@ -97,14 +104,15 @@ def simulate(seed=27,months=240):
     return pd.DataFrame(data,index=idx),pd.Series(.003+.035*z[:,1]+.006*z[:,3],index=idx,name='liability_return')
 
 
-def walk(r,mandate,method,liability=None,lookback=60,cost_bps=15):
+def walk(r,mandate,method,liability=None,lookback=60,cost_bps=15,estimation=None):
     validate(r)
     if lookback<12 or len(r)<=lookback or cost_bps<0: raise ValueError('Invalid backtest inputs')
     w=np.zeros(len(ASSETS)); records=[]; allocations=[]
     for i in range(lookback,len(r)):
         t=0.
         if (i-lookback)%3==0:
-            target=allocate(r.iloc[i-lookback:i],mandate,method,None if liability is None else liability.iloc[i-lookback:i])
+            start=0 if estimation=='auto' else i-lookback
+            target=allocate(r.iloc[start:i],mandate,method,None if liability is None else liability.iloc[start:i],estimation=estimation)
             t=np.abs(target-w).sum(); w=target
         allocations.append(w.copy()); x=r.iloc[i].to_numpy(); gross=w@x
         if t*cost_bps/10000>=1: raise ValueError('Costs exceed assets')
