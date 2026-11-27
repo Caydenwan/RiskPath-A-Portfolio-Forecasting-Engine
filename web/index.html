@@ -239,7 +239,7 @@ function lineChart(labels,series,names,opt={}){
     seg[2][k][c][1]=Math.min(...ys);seg[1][k][c][1]=Math.max(...ys);
     seg[0][k][c][1]=Math.max(seg[2][k][c][1],Math.min(seg[1][k][c][1],ys[1]));
   }}
-  const paths=points.map((p,i)=>curvePath(p,seg[i]));
+  const paths=points.map((p,i)=>curvePath(p,seg[i]));const seriesColors=['#0071e3','#8e8e93','#218b7c','#c58c32','#a35aa8','#577895','#c85e5e','#52663e'];
   const fmt=v=>unit==='usd'?usd(v):unit==='percent'?pct(v,2):Number(v).toFixed(2);
   const displayDate=i=>/^\d{4}-\d\d-\d\d$/.test(labels[i])?new Date(labels[i]+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):labels[i];
   const shortDate=i=>/^\d{4}-\d\d-\d\d$/.test(labels[i])?new Date(labels[i]+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'}):labels[i];
@@ -253,13 +253,13 @@ function lineChart(labels,series,names,opt={}){
     svg+='<path d="'+paths[0]+'" stroke="#0071e3" stroke-width="2.7" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
   }else{
     svg+='<path d="'+paths[0]+' L'+R+','+B+' L'+L+','+B+' Z" fill="url(#'+id+'fill)" opacity=".55"/>';
-    for(let j=series.length-1;j>=0;j--)svg+='<path d="'+paths[j]+'" stroke="'+(j===0?'#0071e3':j===1?'#99999f':'#218b7c')+'" stroke-width="'+(j===0?2.5:1.7)+'" '+(j===1?'stroke-dasharray="5 5"':'')+' fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+    for(let j=series.length-1;j>=0;j--)svg+='<path d="'+paths[j]+'" stroke="'+seriesColors[j%seriesColors.length]+'" stroke-width="'+(j===0?2.5:1.7)+'" '+(j===1?'stroke-dasharray="5 5"':'')+' fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
   }
   svg+='</g>';
   const ticks=[...new Set([0,Math.round((labels.length-1)/2),labels.length-1])];
   ticks.forEach(i=>svg+='<text x="'+X(i)+'" y="277" text-anchor="'+(i===0?'start':i===labels.length-1?'end':'middle')+'" class="axis-label">'+esc(shortDate(i))+'</text>');
   svg+='<g class="scrub-marker" visibility="hidden" pointer-events="none"><line class="scrub-line" y1="'+T+'" y2="'+B+'" stroke="#a7a7af" stroke-width="1" stroke-dasharray="3 3"/><circle class="scrub-dot" r="4.8" fill="#0071e3" stroke="white" stroke-width="2"/></g></svg>';
-  const legend=band?'<span><i class="legend-line"></i>Median</span><span><i class="legend-band"></i>5th–95th percentile</span>'+(series.length>3?'<span><i class="legend-dash"></i>Paid-in capital</span>':''):names.map((n,i)=>'<span><i class="'+(i===0?'legend-line':'legend-dash')+'"></i>'+esc(n)+'</span>').join('');
+  const legend=band?'<span><i class="legend-line"></i>Median</span><span><i class="legend-band"></i>5th–95th percentile</span>'+(series.length>3?'<span><i class="legend-dash"></i>Paid-in capital</span>':''):names.map((n,i)=>'<span><i style="background:'+seriesColors[i%seriesColors.length]+'"></i>'+esc(n)+'</span>').join('');
   chartData.set(id,{labels,series,names,X,Y,L,R,T,B,W,H,fmt,displayDate,band,index:labels.length-1});
   return '<div class="apple-chart" data-chart="'+id+'" tabindex="0" role="group" aria-label="Interactive chart. Use left and right arrow keys to explore data."><div class="chart-readout"><div><div class="chart-date">'+esc(displayDate(labels.length-1))+'</div><div class="chart-number">'+esc(fmt(series[0].at(-1)))+'</div></div><div class="chart-detail">'+(band?'<span>5th–95th percentile</span><b>'+esc(fmt(series[1].at(-1))+' – '+fmt(series[2].at(-1)))+'</b>':series.length>1?'<span>'+esc(names[1])+'</span><b>'+esc(fmt(series[1].at(-1)))+'</b>':'')+'</div></div>'+svg+'<div class="legend apple-legend">'+legend+'</div><div class="chart-hint">Touch or move across the chart to explore · exact monthly values</div></div>';
 }
