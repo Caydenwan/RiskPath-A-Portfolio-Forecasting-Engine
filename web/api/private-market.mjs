@@ -60,6 +60,24 @@ async function requestSeries(symbol,key){
   }catch(e){throw Error(symbol+' market history unavailable or rate limited. Previous snapshot retained.')}
   return d.values;
 }
+function validateImport(data){
+  if(!data||typeof data.csv!=='string'||data.csv.length>500000)throw Error('Invalid private CSV');
+  const rows=data.csv.trim().split(/\r?\n/),header=rows.shift();
+  if(header!=='date,'+ASSETS.join(',')||rows.length<36||rows.length>360)throw Error('Invalid private CSV columns or sample length');
+  let prev=null;const current=monthNo(cutoff());
+  for(const line of rows){const cols=line.split(','),date=cols.shift(),n=monthNo(date);
+    if(cols.length!==ASSETS.length||date!==monthEnd(n)||n>=current||(prev!==null&&n!==prev+1)||cols.some(v=>v.trim()===''||!Number.isFinite(Number(v))||Number(v)<=-1))throw Error('Invalid private CSV month or return');
+    prev=n;
+  }
+  const last=rows.at(-1).split(',')[0],first=rows[0].split(',')[0],c=new Date(Date.UTC(Math.floor((prev+1)/12),(prev+1)%12,1)).toISOString().slice(0,7);
+  return {csv:[header,...rows].join('\n')+'\n',count:rows.length,first,last,cutoff:c,issues:[],shortened:false,source:'User-imported private browser dataset; provenance not independently verified',retrievedAt:new Date().toISOString(),cloud:true};
+}
+async function saveSnapshot(data){
+  const payload=JSON.stringify(data);
+  await put('riskpath/monthly/'+data.cutoff+'.json',payload,{access:'private',allowOverwrite:true,contentType:'application/json',cacheControlMaxAge:60});
+  await put(PATH,payload,{access:'private',allowOverwrite:true,contentType:'application/json',cacheControlMaxAge:60});
+}
+
 async function refresh(existing){
   const month=cutoff();
   if(existing?.cutoff===month)return {data:existing,updated:false};
@@ -74,28 +92,31 @@ async function refresh(existing){
   }
   const data={...alignMarket(series,ASSETS,month),retrievedAt:new Date().toISOString(),source:'Twelve Data · private server snapshot',cloud:true};
   // Archive each successful monthly snapshot, then replace the latest pointer. No public redistribution.
-  const payload=JSON.stringify(data);
-  await put('riskpath/monthly/'+month+'.json',payload,{access:'private',allowOverwrite:true,contentType:'application/json',cacheControlMaxAge:60});
-  await put(PATH,payload,{access:'private',allowOverwrite:true,contentType:'application/json',cacheControlMaxAge:60});
+  await saveSnapshot(data);
   return {data,updated:true};
 }
 export default async function handler(req,res){
   res.setHeader('Cache-Control','private, no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
-  const cron=req.query?.cron==='1',token=String(req.headers.authorization||'').replace(/^Bearer /,'');
-  const expected=cron?process.env.CRON_SECRET:process.env.RISKPATH_OWNER_TOKEN;
-  if(!sameSecret(token,expected))return res.status(401).json({error:'Private access not configured or unauthorized'});
+  const token=String(req.headers.authorization||'').replace(/^Bearer /,'');
+  const cron=sameSecret(token,process.env.CRON_SECRET);
+  if(!cron&&!sameSecret(token,process.env.RISKPATH_OWNER_TOKEN))return res.status(401).json({error:'Private access not configured or unauthorized'});
   if((cron&&req.method!=='GET')||(!cron&&!['GET','POST'].includes(req.method)))return res.status(405).json({error:'Method not allowed'});
   try{
     const existing=await readHistory();
     if(!cron&&req.method==='GET')return res.status(200).json({data:existing,needsUpdate:existing?.cutoff!==cutoff()});
+    if(!cron&&req.method==='POST'&&req.body?.action==='import'){
+      const imported=validateImport(req.body.data);
+      if(existing&&existing.cutoff>=imported.cutoff)return res.status(200).json({data:existing,updated:false});
+      await saveSnapshot(imported);return res.status(200).json({data:imported,updated:true});
+    }
     const result=await refresh(existing);
     if(cron)return res.status(200).json({updated:result.updated,coverage:result.data.last});
     return res.status(200).json(result);
   }catch(e){
     // Never return provider URLs, tokens, headers or raw exceptions.
     const m=String(e?.message||'');
-    const safe=/^(Private market API credential not configured|[A-Z]{2,5} market history unavailable or rate limited\. Previous snapshot retained\.|Latest completed month |Only \d+ consecutive common returns|[A-Z]{2,5} has no valid completed monthly adjusted prices)/.test(m)?m:'Private refresh failed. Previous snapshot retained.';
+    const safe=/^(Invalid private CSV|Private market API credential not configured|[A-Z]{2,5} market history unavailable or rate limited\. Previous snapshot retained\.|Latest completed month |Only \d+ consecutive common returns|[A-Z]{2,5} has no valid completed monthly adjusted prices)/.test(m)?m:'Private refresh failed. Previous snapshot retained.';
     return res.status(503).json({error:safe});
   }
 }
