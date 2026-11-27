@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/private-market.mjs": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/private-market?cron=1",
+      "schedule": "0 14 3-5 * *"
+    }
+  ]
+}
