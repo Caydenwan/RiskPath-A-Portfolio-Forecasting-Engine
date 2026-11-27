@@ -12,7 +12,7 @@ def settings(**kw):
 def test_public_frontier_and_shared_validation():
     r=pd.read_csv(Path(__file__).resolve().parents[1]/'web/public-tsp-returns.csv',index_col=0,parse_dates=True)
     p=settings(validate_model=True,compare_scenarios=True)
-    w,_=public_allocate(r,50,1,'auto')
+    w,_,_=public_allocate(r,50,1,'auto')
     f=diagnostics(r,p,w,True)
     assert 0<=f['forecast']['goal_probability']<=1 and len(f['scenarios'])==4
     v=f['validation'];assert v['months']==len(r)-60 and v['first']==str(r.index[60].date())
