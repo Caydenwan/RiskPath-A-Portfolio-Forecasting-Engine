@@ -1,0 +1,8 @@
+market_study_local/
+market_returns.csv
+market_returns.metadata.json
+market_results/
+external_results/
+__pycache__/
+.pytest_cache/
+.venv/
