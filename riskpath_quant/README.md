@@ -78,3 +78,7 @@ Running the institutional experiment also generates allocation, risk contributio
 ## Interpretation
 
 The selected universe is not a point-in-time investment universe. Common inception dates, fund selection bias, covariance estimation error, simplified execution costs and fund-level exposures limit conclusions. Listed private-market vehicles are not direct private asset investments. The current release does not claim verified historical performance or production readiness.
+
+## Personal allocation
+
+The browser's Personal mode uses [personal.py](personal.py). It minimizes `0.5 * lambda * w' S w - mu' w` with the same shrunk estimates as the institutional engine. The effective score is the smaller of the user score and the illustrative horizon ceiling: 30 (1 year), 50 (3 years), 70 (5 years), 100 (10+ years). Lambda decreases geometrically from 1000 to 0.5 as effective score increases. Fixed long-only constraints cap noncash individual targets at 25%, equity at 80%, rates at 85%, credit, real assets and diversifiers each at 35%, and listed private-market proxies at 10%; cash may reach 100%. These are assumptions rather than a calibrated suitability framework. Higher scores target a lower variance penalty; realized risk and forecast percentiles are not guaranteed to move monotonically. [Tests](test_personal.py) cover feasibility, horizon mapping and modeled volatility ordering on a synthetic sample.
