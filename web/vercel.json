@@ -6,7 +6,7 @@
   },
   "crons": [
     {
-      "path": "/api/private-market?cron=1",
+      "path": "/api/private-market",
       "schedule": "0 14 3-5 * *"
     }
   ]
