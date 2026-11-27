@@ -47,7 +47,7 @@ def public_allocate(r,score,years,selection='auto'):
 def calculate_public(r,p):
     if p['profile']!='personal' or p['mode']!='forecast': raise ValueError('Public research supports Personal forecasting. Select Advanced ETF data for institutional backtests.')
     if np.any(np.diff(r.index.to_period('M').asi8)!=1) or r.index[-1].to_period('M')>=pd.Timestamp(p['as_of']).to_period('M'): raise ValueError('Require consecutive completed monthly TSP observations')
-    selection=p.get('lookback','auto'); meta=estimate_meta(len(r),selection)
+    selection=p.get('lookback','auto'); meta=estimate_meta(len(r),selection,r.to_numpy())
     meta.update(first=str(r.index[0].date()),last=str(r.index[-1].date()),training_first=str(r.index[-meta['longest']].date()),provider='USPS Postal Bulletin · TSP five-fund published returns')
     w,pref,risk=public_allocate(r,float(p['risk_score']),int(p['years']),selection)
     from research import diagnostics
