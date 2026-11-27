@@ -1,0 +1,17 @@
+{
+  "source": "seeded synthetic asset and liability proxies; not historical",
+  "assets": 28,
+  "sleeves": [
+    "cash",
+    "equity",
+    "rates",
+    "credit",
+    "real",
+    "diversifiers",
+    "listed_private"
+  ],
+  "oos_months": 180,
+  "cost_bps": 15,
+  "rebalance_months": 3,
+  "lookback_months": 60
+}
