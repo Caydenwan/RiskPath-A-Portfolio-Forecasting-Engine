@@ -1,4 +1,6 @@
-# Portfolio construction under estimation risk and transaction costs
+# RiskPath | Baseline Research Archive
+
+Historical 11-asset numerical experiment, preserved for reproducibility. For the current 28-asset research engine, see [RiskPath 2.2](README.md) and the [institutional research note](institutional_research.md).
 
 ## Research question
 How do long-only allocations designed to minimize variance or tail losses compare with equal-weight and 60/40 benchmarks when evaluated using strictly chronological estimation windows and trading costs?
