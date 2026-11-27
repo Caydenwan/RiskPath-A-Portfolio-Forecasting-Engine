@@ -12,7 +12,7 @@ from engine import metrics, validate
 from institutional import ASSETS, POLICY, METHODS, walk
 
 
-def evaluate(r, lookbacks=(36,60), min_oos=12):
+def evaluate(r, lookbacks=(36,60,120,240), min_oos=12):
     validate(r)
     if list(r.columns)!=ASSETS or np.any(np.diff(r.index.to_period('M').asi8)!=1):
         raise ValueError('Expected complete consecutive monthly returns for the 28-asset universe')
@@ -27,10 +27,22 @@ def evaluate(r, lookbacks=(36,60), min_oos=12):
         coverage.append({'lookback':lb,'status':'evaluated','oos_months':n,'first_test':str(r.index[lb].date()),'last_test':str(r.index[-1].date())})
         for mandate in POLICY:
             for method in METHODS:
-                b,w=walk(r,mandate,method,lookback=lb)
+                b,w=walk(r,mandate,method,lookback=lb,estimation=str(lb))
                 rows.append({'lookback':lb,'mandate':mandate,'method':method,'oos_months':n,
                     **metrics(b.net.to_numpy(),b.turnover.to_numpy(),r.BIL.loc[b.index].to_numpy()),
                     'avg_cash':float(w.BIL.mean())})
+    # Adaptive estimation starts with 36 observations; later windows grow using only prior data.
+    n=len(r)-36
+    if n>=min_oos:
+        coverage.append({'lookback':'auto','status':'evaluated','oos_months':n,'first_test':str(r.index[36].date()),'last_test':str(r.index[-1].date())})
+        for mandate in POLICY:
+            for method in METHODS:
+                b,w=walk(r,mandate,method,lookback=36,estimation='auto')
+                rows.append({'lookback':'auto','mandate':mandate,'method':method,'oos_months':n,
+                    **metrics(b.net.to_numpy(),b.turnover.to_numpy(),r.BIL.loc[b.index].to_numpy()),
+                    'avg_cash':float(w.BIL.mean())})
+    else:
+        coverage.append({'lookback':'auto','status':'insufficient_history','oos_months':max(n,0)})
     if not rows:
         raise ValueError('No eligible estimation window: '+json.dumps(coverage))
     return pd.DataFrame(rows),coverage
