@@ -1,5 +1,16 @@
-# RiskPath  
-**Visual Portfolio Forecasting Engine**
+# RiskPath
+
+**Quantitative Portfolio Research & Forecasting**
+
+### Institutional multi-asset research (v2.1)
+
+[Open RiskPath Quant →](riskpath_quant/README.md) · [Research note](riskpath_quant/institutional_research.md) · [Synthetic benchmark results](riskpath_quant/institutional_outputs/metrics.csv)
+
+The research module covers 28 liquid vehicles, seven asset classes, pension and multi-strategy mandates, constrained optimization, risk budgeting, liability-relative risk, rolling backtests and stress scenarios. Results in the checked-in institutional experiment use explicitly synthetic data.
+
+---
+
+## Original visual portfolio forecasting engine
 
 RiskPath is a lightweight portfolio analytics and forecasting engine that transforms a user’s **risk tolerance**, **investment horizon**, and **capital plan** into an intuitive, forward-looking portfolio allocation and return outlook.
 
