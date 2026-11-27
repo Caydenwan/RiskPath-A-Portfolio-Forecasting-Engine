@@ -32,5 +32,4 @@ def main():
     out.with_suffix('.metadata.json').write_text(json.dumps({'provider':'Yahoo Finance via yfinance; third-party adjusted close, verify and check terms before use','retrieved_utc':pd.Timestamp.now(tz='UTC').isoformat(),'start_requested':a.start,'end_exclusive':end,'first_return':str(r.index[0].date()),'last_return':str(r.index[-1].date()),'observations':len(r),'assets':ASSETS,'method':'monthly adjusted-close simple return; common post-inception dates, no forward fill, incomplete month excluded'},indent=2)+'\n')
     print(f'{len(r)} common monthly observations; 60-month lookback leaves {max(0,len(r)-60)} test months. Short history limits inference.')
 
-
 if __name__=='__main__': main()
