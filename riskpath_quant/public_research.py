@@ -50,7 +50,8 @@ def calculate_public(r,p):
     selection=p.get('lookback','auto'); meta=estimate_meta(len(r),selection)
     meta.update(first=str(r.index[0].date()),last=str(r.index[-1].date()),training_first=str(r.index[-meta['longest']].date()),provider='USPS Postal Bulletin · TSP five-fund published returns')
     w,pref,risk=public_allocate(r,float(p['risk_score']),int(p['years']),selection)
-    f=forecast_paths(r.iloc[-meta['longest']:].to_numpy(),w,float(p['initial']),float(p['contribution']),int(p['years']),p['as_of'],cost_bps=float(p['cost']),scenario=p.get('scenario','baseline'),crisis_overlay=public_shock)
+    from research import diagnostics
+    research=diagnostics(r,p,w,public=True)
     stress_scenarios={'equity_crash':[0,.06,-.30],'inflation_rates':[0,-.12,-.15],'credit_crunch':[0,.04,-.18],'liquidity_shock':[0,-.04,-.22]}
     sw=G@w
-    return dict(mode='forecast',source='public',forecast=f,sleeves=GROUPS,weights=sw.tolist(),risk=risk.tolist(),stress={k:float(sw@v) for k,v in stress_scenarios.items()},assets=ASSETS,assetWeights=w.tolist(),preference=pref,estimation=meta)
+    return dict(mode='forecast',source='public',**research,sleeves=GROUPS,weights=sw.tolist(),risk=risk.tolist(),stress={k:float(sw@v) for k,v in stress_scenarios.items()},assets=ASSETS,assetWeights=w.tolist(),preference=pref,estimation=meta)
