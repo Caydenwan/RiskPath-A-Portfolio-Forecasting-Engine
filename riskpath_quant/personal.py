@@ -3,6 +3,7 @@ import numpy as np
 from scipy.optimize import minimize
 from institutional import ASSETS, GROUPS, G, covariance
 from engine import validate
+from estimation import moments
 
 HORIZON_CAPS = {1:30, 3:50, 5:70, 10:100, 15:100, 20:100, 30:100}
 SLEEVE_CAPS = np.array([1., .80, .85, .35, .35, .35, .10])
@@ -16,13 +17,14 @@ def preference(score, years):
     return effective, float(1000 * (0.0005 ** (effective / 100)))
 
 
-def personal_allocate(r, score, years):
+def personal_allocate(r, score, years, estimation=None):
     validate(r)
     if list(r.columns) != ASSETS or len(r) < 12:
         raise ValueError('Require ordered 28-asset history and at least 12 months')
     effective, lam = preference(score, years)
-    x = r.to_numpy(); s = covariance(x)
-    avg = 12*x.mean(axis=0)
+    x = r.to_numpy()
+    if estimation is None: avg,s=12*x.mean(axis=0),covariance(x)
+    else: avg,s=moments(x,estimation)
     mu = .25*avg + .75*(G.T @ ((G@avg)/G.sum(axis=1)))
     # Fixed feasible set across scores: higher risk aversion penalizes variance more.
     def obj(w): return 100*(.5*lam*(w@s@w) - mu@w)
