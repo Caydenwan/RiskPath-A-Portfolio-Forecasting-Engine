@@ -2,6 +2,9 @@
 
 **Institutional Multi-Asset Portfolio Research & Risk Analytics**
 
+**[Open interactive research workbench](https://riskpath-workbench.vercel.app)** — browser-based controls, charts and Python calculations; no local installation required.
+
+
 A Python research platform for systematic portfolio construction, risk budgeting, liability-relative allocation and chronological backtesting across 28 liquid investment vehicles. RiskPath compares alternative allocation objectives under explicit investment mandates, rather than treating a portfolio as a fixed set of weights.
 
 [Research methodology](riskpath_quant/institutional_research.md) · [Model implementation](riskpath_quant/institutional.py) · [Market-data study](riskpath_quant/market_study.py) · [Run market research](https://github.com/Caydenwan/RiskPath-A-Portfolio-Forecasting-Engine/actions/workflows/riskpath-market-study.yml)
