@@ -1,4 +1,6 @@
-# Institutional Multi-Asset Allocation: Mandate Constraints and Liability Risk
+# RiskPath 2.2 | Institutional Multi-Asset Allocation
+
+*Research note: mandate constraints and liability-relative risk. Synthetic validation experiment.*
 
 ## Research question
 How do asset-class allocation limits and different optimization objectives affect risk-adjusted performance and funding risk in a diversified liquid investment portfolio? This is an independently designed numerical study, not a replication of any institution's holdings or proprietary model.
@@ -38,7 +40,7 @@ The liability-aware allocation reduced annualized volatility of the asset-minus-
 Four illustrative sleeve shock vectors are applied to allocations estimated from the final 60 months. They are instantaneous mark-to-market scenarios, not historical event reconstructions, probabilistic forecasts or bounds on potential loss.
 
 ## Validation and limitations
-29 local tests passed across the legacy and institutional research modules. They cover optimization feasibility, chronology, covariance, funding arithmetic and missing-data treatment. Public ETF history ingestion is optional; actual data retrieval and historical model performance were not validated in this experiment. Common inception dates, current-universe selection bias, revisions, overlapping exposures, transaction costs and alternative-fund leverage may affect results. There is no derivatives position-level risk, private-asset valuation model, financing, margin, redemption modeling, cash-flow liability schedule, or independent institutional benchmark. All parameter values and policy targets are illustrative. Numerical results are not investment recommendations.
+29 local tests passed across the legacy and institutional research modules. They cover optimization feasibility, chronology, covariance, funding arithmetic and missing-data treatment. A separate [historical market-data runner](market_study.py) supports 36- and 60-month estimation windows and records coverage and provenance. Actual data retrieval and historical model performance have not yet been verified; this note reports the synthetic experiment only. Common inception dates, current-universe selection bias, revisions, overlapping exposures, transaction costs and alternative-fund leverage may affect results. There is no derivatives position-level risk, private-asset valuation model, financing, margin, redemption modeling, cash-flow liability schedule, or independent institutional benchmark. All parameter values and policy targets are illustrative. Numerical results are not investment recommendations.
 
 ## Reproduction
 Install requirements, run `python -m pytest -q`, then `python institutional.py` from this directory. The runner generates metrics, sleeve allocations, risk contributions, monthly returns and stress results. The checked-in metrics and stress files are deterministic synthetic outputs.
