@@ -42,26 +42,35 @@ const PUBLIC_CSV="date,TSP_G,TSP_F,TSP_C,TSP_S,TSP_I\n2019-12-31,0.001600,-0.000
 const publicInstruments={TSP_G:['cash','TSP G Fund · special U.S. government securities'],TSP_F:['rates','TSP F Fund · broad U.S. bond market'],TSP_C:['equity','TSP C Fund · large U.S. stocks'],TSP_S:['equity','TSP S Fund · U.S. completion-market stocks'],TSP_I:['equity','TSP I Fund · international stocks']};
 let marketData=null,marketBusy=false,cloudBusy=false;const STORE_KEY='riskpath.private.market.v1';
 const CLOUD_KEY='riskpath.private.cloud.access.v1';
+let ownerSession=false;
+function displayOwnerSession(active){ownerSession=active;$('#cloudToken').hidden=active;$('#cloudToken').previousElementSibling.hidden=active;$('#readCloud').textContent=active?'Load saved history':'Sign in / load saved history';$('#forgetCloud').hidden=!active;$('#importCloud').hidden=!active;}
 function savedCloudToken(){try{return localStorage.getItem(CLOUD_KEY)||''}catch(e){return ''}}
-function restoreCloud(){if(savedCloudToken()){$('#rememberCloud').checked=true;$('#cloudToken').placeholder='Saved on this device';$('#cloudStatus').textContent='Cloud access saved · load your private history.'}}
-function forgetCloud(){try{localStorage.removeItem(CLOUD_KEY)}catch(e){}$('#cloudToken').value='';$('#cloudToken').placeholder='Your private access token';$('#rememberCloud').checked=false;if(marketData?.cloud)marketData=null;$('#cloudStatus').textContent='Private cloud access cleared from this browser. Stored server history is unchanged.';if(source.value==='market'){$('#kpis').innerHTML='';$('#results').innerHTML=panel('Private history','Access cleared','<p class="muted">Reconnect to use cloud data, or switch to public research.</p>');$('#insight').textContent='Private access cleared.'}}
+async function restoreCloud(){
+  const legacy=savedCloudToken();
+  try{
+    if(legacy){const r=await fetch('/api/private-market',{method:'POST',headers:{Authorization:'Bearer '+legacy,'Content-Type':'application/json'},body:JSON.stringify({action:'login'})});if(r.ok)localStorage.removeItem(CLOUD_KEY)}
+    const r=await fetch('/api/private-market',{cache:'no-store'});displayOwnerSession(r.ok);
+    if(ownerSession){$('#cloudToken').value='';$('#cloudToken').placeholder='Signed in';$('#cloudStatus').textContent='Owner session restored · private history available.';if(source.value==='market')await loadPrivateCloud('read')}
+  }catch(e){}
+}
+async function forgetCloud(){if(running||cloudBusy||marketBusy)return;try{const r=await fetch('/api/private-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(!r.ok)throw Error('Sign-out failed');localStorage.removeItem(CLOUD_KEY)}catch(e){$('#cloudStatus').textContent='Could not sign out. Retry.';return}displayOwnerSession(false);$('#cloudToken').value='';$('#cloudToken').placeholder='Owner sign-in token';$('#rememberCloud').checked=false;if(marketData?.cloud)marketData=null;$('#cloudStatus').textContent='Signed out. Stored server history is unchanged.';source.value='public';setProfile('personal');source.onchange();$('#kpis').innerHTML='';$('#results').innerHTML=panel('Private history','Access cleared','<p class="muted">Public history is available without signing in.</p>');$('#insight').textContent='Private access cleared.';if(worker){worker.terminate();worker=null}await run()}
 async function loadPrivateCloud(action='read'){
   if(cloudBusy||marketBusy||running)return;
-  const token=$('#cloudToken').value.trim()||($('#rememberCloud').checked?savedCloudToken():'');
-  if(!token){$('#cloudStatus').textContent='Enter the private owner access token configured in Vercel.';return}
+  const token=$('#cloudToken').value.trim();
   const old=marketData?.cloud?null:(marketData||savedMarket()?.data);
   if(action==='import'&&!old?.csv){$('#cloudStatus').textContent='No private download is stored in this browser. Connect direct API once or use Download this month.';return}
   cloudBusy=true;for(const id of ['readCloud','importCloud','refreshCloud','forgetCloud','run','loadMarket'])$('#'+id).disabled=true;
   $('#cloudStatus').textContent=action==='refresh'?'Downloading 28 ETFs on the server · this may take up to 4 minutes…':action==='import'?'Saving your private browser download…':'Loading the private monthly snapshot…';
   let success=false;
   try{
-    const init={method:action==='read'?'GET':'POST',headers:{Authorization:'Bearer '+token},cache:'no-store'};
+    if(token){const login=await fetch('/api/private-market',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({action:'login'})});if(!login.ok)throw Error('Owner sign-in failed');displayOwnerSession(true);$('#cloudToken').value='';$('#cloudToken').placeholder='Signed in';try{localStorage.removeItem(CLOUD_KEY)}catch(e){}}
+    const init={method:action==='read'?'GET':'POST',headers:{},cache:'no-store'};
     if(action!=='read'){init.headers['Content-Type']='application/json';init.body=JSON.stringify(action==='import'?{action:'import',data:{csv:old.csv}}:{action:'refresh'})}
     const response=await fetch('/api/private-market',init),result=await response.json();
-    if(response.status===401)throw Error('Owner access not configured or invalid token. Set the private environment variables in Vercel and redeploy.');
+    if(response.status===401){displayOwnerSession(false);throw Error('Private ETF history requires owner sign-in. Public TSP history needs no key.')}
     if(!response.ok)throw Error(result.error||'Cloud history unavailable');
-    if($('#rememberCloud').checked){try{localStorage.setItem(CLOUD_KEY,token);$('#cloudToken').value='';$('#cloudToken').placeholder='Saved on this device'}catch(e){$('#cloudStatus').textContent='Browser could not save access.'}}else try{localStorage.removeItem(CLOUD_KEY)}catch(e){}
-    if(!result.data){$('#cloudStatus').textContent='Private storage is empty. Save your existing download or download this month.';return}
+    displayOwnerSession(true);
+    if(!result.data){$('#cloudStatus').textContent='Private storage is empty. Import an existing private dataset or wait for the scheduled refresh.';return}
     const d=result.data;if(typeof d.csv!=='string'||!d.cloud||!Array.isArray(d.issues)||d.count<36)throw Error('Invalid private snapshot');
     marketData=d;
     $('#cloudStatus').textContent='Private cloud · '+d.count+' months · '+d.first+' to '+d.last+' · '+(d.cutoff===localDate().slice(0,7)?'Current monthly snapshot':'Previous snapshot; next scheduled refresh pending')+' · '+(d.source||'Private dataset');
@@ -295,6 +304,18 @@ let worker;let running=false;function setup(){worker=new Worker('./worker.js');w
 async function run(){if(running||marketBusy||cloudBusy)return;running=true;$('#run').disabled=true;$('#status').className='status';$('#status').textContent='Preparing calculation…';try{const p=await collect();if(!worker)setup();worker.postMessage(p)}catch(e){running=false;$('#run').disabled=false;$('#status').className='status error';$('#status').textContent=e.message}}
 $('#loadMarket').onclick=loadMarket;$('#readCloud').onclick=()=>loadPrivateCloud('read');$('#importCloud').onclick=()=>loadPrivateCloud('import');$('#refreshCloud').onclick=()=>loadPrivateCloud('refresh');$('#forgetCloud').onclick=forgetCloud;$('#rememberCloud').onchange=()=>{if(!$('#rememberCloud').checked){try{localStorage.removeItem(CLOUD_KEY)}catch(e){}$('#cloudToken').placeholder='Your private access token'}};$('#forgetMarket').onclick=forgetMarket;$('#rememberMarket').onchange=()=>{if(!$('#rememberMarket').checked){try{localStorage.removeItem(STORE_KEY)}catch(e){}$('#marketKey').placeholder='Your free personal API key';$('#marketStatus').textContent='Device storage disabled. Current in-memory data remain available for this session.'}};$('#run').onclick=run;$('#reset').onclick=()=>{reset();$('#status').textContent='Inputs reset. Run to update results.'};
 function workspaceHeader(){const portfolio=workspace==='portfolio';document.title=portfolio?'RiskPath · Portfolio':'RiskPath · Research';$('#portfolioNav').setAttribute('aria-current',portfolio?'page':'false');$('#researchNav').setAttribute('aria-current',portfolio?'false':'page');$('#workspaceTag').textContent=portfolio?'Portfolio':'Research';$('#workspaceTitle').textContent=portfolio?'Make your goal achievable.':'Explore the model. Understand the risk.';$('#workspaceSubtitle').textContent=portfolio?'Find a financial plan within your risk limits.':'Analyze portfolio construction, market regimes, estimation and out-of-sample results.';$('#workspaceInputTitle').textContent=portfolio?'01 · Your plan':'01 · Research profile'}
+const changeSource=source.onchange;
+source.onchange=()=>{changeSource();if(source.value==='market'&&ownerSession&&!marketData?.cloud&&!running&&!cloudBusy&&!marketBusy)loadPrivateCloud('read')};
+source.querySelector('[value="market"]').textContent='Advanced · private 28 ETF history (owner)';
+source.querySelector('[value="public"]').textContent='Public return history · no key';
+$('#cloudToken').previousElementSibling.textContent='Owner sign-in (one time per device)';
+$('#cloudToken').placeholder='Owner sign-in token';
+$('#rememberCloud').closest('label').hidden=true;
+$('#refreshCloud').hidden=true;
+$('#readCloud').textContent='Sign in / load saved history';
+$('#forgetCloud').textContent='Sign out';
+displayOwnerSession(false);
+$('#cloudStatus').textContent='Public visitors: use Public return history. Private ETF data requires owner sign-in; refreshes are scheduled.';
 reset();workspaceHeader();restoreMarket();restoreCloud();if(workspace==='portfolio'){cards([['Financial goal',usd(250000),'Today’s dollars'],['Time horizon','10 years','Goal planning'],['Monthly contribution',usd(500),'External cash flow'],['Risk budget','20%','Drawdown threshold']]);$('#insight').textContent='Find a contribution, timeline and portfolio within your modeled risk limits.';}else{cards([['Research universe','5 funds','Public TSP data'],['Model','Mean–variance','Personal research'],['Simulation paths','2,000','Historical resampling'],['Horizon','5 years','Future simulation']]);$('#insight').textContent='Portfolio research, model diagnostics and institutional allocation. Select Advanced for private data.';}$('#results').innerHTML=panel(workspace==='portfolio'?'Goal planner':'Research workbench','Loading historical data','<p class="muted">Loading the public research engine. No API key required.</p>');
 document.querySelector('.inputs').addEventListener('input',()=>{if(!running){document.querySelector('#status').className='status';document.querySelector('#status').textContent='Inputs changed · displayed results are from the previous calculation.'}});
 

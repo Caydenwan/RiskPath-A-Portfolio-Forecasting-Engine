@@ -1,5 +1,5 @@
 import { get, put } from '@vercel/blob';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 const ASSETS=["BIL","VTI","IWM","QQQ","VTV","VEA","VWO","SHY","IEF","TLT","TIP","BNDX","LQD","HYG","EMB","BKLN","GLD","DBC","VNQ","IGF","DBMF","KMLM","BTAL","QAI","UUP","TAIL","PSP","BIZD"];
 const PATH='riskpath/monthly/latest.json';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
@@ -8,6 +8,18 @@ function sameSecret(actual,expected){
   const digest=s=>createHash('sha256').update(s).digest();
   return timingSafeEqual(digest(actual),digest(expected));
 }
+const SESSION='__Host-riskpath-owner';
+const SESSION_AGE=30*24*60*60;
+function signSession(exp,secret){return createHmac('sha256',secret).update('riskpath-owner-v1:'+exp).digest('hex')}
+function hasSession(req,secret){
+  if(typeof secret!=='string'||secret.length<24)return false;
+  const value=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(SESSION+'='))?.slice(SESSION.length+1)||'';
+  const match=/^(\d{10})\.([a-f0-9]{64})$/.exec(value);
+  if(!match)return false;
+  const now=Math.floor(Date.now()/1000),exp=Number(match[1]);
+  return exp>now&&exp<=now+SESSION_AGE&&sameSecret(match[2],signSession(exp,secret));
+}
+function sessionCookie(value,maxAge){return `${SESSION}=${value}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`}
 function monthNo(s){const a=s.match(/^(\d{4})-(0[1-9]|1[0-2])/);if(!a)throw Error('Invalid monthly date');return +a[1]*12+(+a[2]-1)}
 function monthEnd(n){return new Date(Date.UTC(Math.floor(n/12),n%12+1,0)).toISOString().slice(0,10)}
 function alignMarket(series,assets,cutoff){
@@ -100,7 +112,21 @@ export default async function handler(req,res){
   res.setHeader('X-Content-Type-Options','nosniff');
   const token=String(req.headers.authorization||'').replace(/^Bearer /,'');
   const cron=sameSecret(token,process.env.CRON_SECRET);
-  if(!cron&&!sameSecret(token,process.env.RISKPATH_OWNER_TOKEN))return res.status(401).json({error:'Private access not configured or unauthorized'});
+  const secret=process.env.RISKPATH_OWNER_TOKEN, owner=sameSecret(token,secret);
+  const session=hasSession(req,secret);
+  if(req.method==='POST'&&!cron){
+    if(req.headers.origin!==`https://${req.headers.host}`)return res.status(403).json({error:'Same-origin request required'});
+    if(req.body?.action==='logout'){
+      res.setHeader('Set-Cookie',sessionCookie('',0));return res.status(200).json({signedIn:false});
+    }
+    if(req.body?.action==='login'){
+      if(!owner)return res.status(401).json({error:'Owner access not authorized'});
+      const exp=Math.floor(Date.now()/1000)+SESSION_AGE;
+      res.setHeader('Set-Cookie',sessionCookie(`${exp}.${signSession(exp,secret)}`,SESSION_AGE));
+      return res.status(200).json({signedIn:true});
+    }
+  }
+  if(!cron&&!owner&&!session)return res.status(401).json({error:'Private access not configured or unauthorized'});
   if((cron&&req.method!=='GET')||(!cron&&!['GET','POST'].includes(req.method)))return res.status(405).json({error:'Method not allowed'});
   try{
     const existing=await readHistory();
@@ -110,6 +136,7 @@ export default async function handler(req,res){
       if(existing&&existing.cutoff>=imported.cutoff)return res.status(200).json({data:existing,updated:false});
       await saveSnapshot(imported);return res.status(200).json({data:imported,updated:true});
     }
+    if(!cron)return res.status(405).json({error:'Market refresh runs on the server schedule only'});
     const result=await refresh(existing);
     if(cron)return res.status(200).json({updated:result.updated,coverage:result.data.last});
     return res.status(200).json(result);
